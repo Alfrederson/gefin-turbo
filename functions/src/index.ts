@@ -128,14 +128,12 @@ const extraiUsuario = (req:Request) =>({
 const validarTransacao = (req:Request, res:Response, sucesso:(arg0:Transacao, arg1: Response)=>void) =>{
     let _op = extraiOperacao(req)
     if(!_op){
-        res.status(400)
-        res.send("Operação inválida.")
+        res.status(400).send("Operação inválida.")
         return
     }
     let _usuario = extraiUsuario(req)
     if(!_usuario){
-        res.status(400)
-        res.send("Usuário inválido.")
+        res.status(400).send("Usuário inválido.")
         return
     }
     // suuuuceeesso
@@ -179,28 +177,23 @@ async function cria(req:Request, res:Response){
                  data : data.iso,
                    id : id}
             )
-
-            res.status(200)
-            res.json({msg:"Operação registrada.", id:id})
+            res.status(200).json({msg:"Operação registrada.", id:id})
             return
         }catch(e){
-            res.status(400)
-            res.send("Erro na criação do registro:\n"+e)
+            res.status(400).send("Erro na criação do registro:\n"+e)
         } 
     })
 }
 
 // GET /x
 async function lista(req:Request, res:Response){
-    // traversal de árvore da esquerda pra direita
     validarTransacao(req, res, async (transacao, res)=>{
         let result: (FirebaseFirestore.DocumentData | undefined)[] = [],
             record = await db.collection(USERS+"/"+transacao.u.id+"/"+transacao.op.tipo).get()
         record.forEach( (d:DocumentSnapshot) =>{
             result.push(d.data())
         })
-        res.status(200)
-        res.json(result)
+        res.status(200).json(result)
     })
 }
 
@@ -212,11 +205,9 @@ async function detalha(req:Request, res:Response){
                 throw("ID inválido.")
             const caminho : string = [transacao.u.id,transacao.op.tipo,transacao.op.id].join("/")
             let r2 = await db.collection(USERS).doc(caminho).get()
-            res.status(200)
-            res.json(  r2.data() )
+            res.status(200).json(  r2.data() )
         }catch(e){
-            res.status(400)
-            res.send("Erro procurando o registro:\n"+e)
+            res.status(400).send("Erro procurando o registro:\n"+e)
         }
     })
 }
@@ -248,18 +239,14 @@ async function atualiza(req:Request, res:Response){
                         t.create(db.collection(pasta).doc(id), alterado)
                          .delete(db.collection(pasta).doc(original))
                     })
-                }else{
+                }else
                     // atualiza o registro existente.
-                    await db.collection(pasta).doc(id).update(alterado)
-                }        
-            }else{
+                    await db.collection(pasta).doc(id).update(alterado)    
+            }else
                 throw "Operação "+original+" não existe."
-            }
-            res.status(200)
-            res.json({msg : "Operação modificada." , id : id})
+            res.status(200).json({msg : "Operação modificada." , id : id})
         }catch(e){
-            res.status(400)
-            res.send("Erro alterando a operação:\n"+e)
+            res.status(400).send("Erro alterando a operação:\n"+e)
         }
     })
 }
@@ -272,11 +259,9 @@ async function exclui(req:Request, res:Response){
                 throw("ID inválido.")
             // exclui da lista
             await db.collection([USERS,transacao.u.id,transacao.op.tipo].join("/")).doc(transacao.op.id).delete()
-            res.status(200)
-            res.json({msg : "Operação removida.", id: transacao.op.id})
+            res.status(200).json({msg : "Operação removida.", id: transacao.op.id})
         }catch(e){
-            res.status(400)
-            res.send("Erro eliminando o registro:\n"+e)
+            res.status(400).send("Erro eliminando o registro:\n"+e)
         }
     })
 }
