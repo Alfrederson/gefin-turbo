@@ -1,8 +1,7 @@
 // categoria pode ser despesa ou receita
 // extrai os dados a partir da requisição.
 import { Request } from "firebase-functions"
-import categorias from "./categorias"
-import { c, Parametros, Consulta } from "./estruturas"
+import { c, Parametros, Consulta, Categorias } from "./estruturas"
 import { util } from "./utilidade"
 import { valida } from "./validacao"
 
@@ -16,9 +15,9 @@ export const extrai = {
             return null
         else
             return{
-                id        : util.padrao(req.body.id , req.params.id),
+                id        : req.body.id || req.params.id,
                 descricao : req.body.descricao,
-                categoria : util.padrao(req.body.categoria,categorias.OUTRAS).toUpperCase(), 
+                categoria : util.padrao(req.body.categoria,Categorias.OUTRAS).toUpperCase(), 
                 valor     : parseFloat( req.body.valor ),
                 data      : parseInt(req.body.data ),
                 tipo      : op}

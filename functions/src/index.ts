@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions"
 import { Request, Response } from "firebase-functions"
- import { /*DocumentSnapshot,*/ DocumentSnapshot, QuerySnapshot/*, Transaction*/ } from "firebase-admin/firestore"
+ import { /*DocumentSnapshot,*/ DocumentSnapshot, QuerySnapshot, Transaction } from "firebase-admin/firestore"
 
 import { /*Consulta,*/ Data, Operacao, /*Transacao,*/ c , Categorias } from "./estruturas"
 import { util   } from "./utilidade"
@@ -17,7 +17,6 @@ const
 admin.initializeApp()
 const db = admin.firestore()
 
-    
 // cadastra operação
 async function cria(req:Request, res:Response){
     // receita ou despesa vem de dentro da URL.
@@ -38,7 +37,7 @@ async function cria(req:Request, res:Response){
             throw("Valor inválido: "+op.valor)
 
         const 
-            id      = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao}`),
+            id      = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao.toLowerCase()}`),
             caminho = [c.USERS,transacao.u.id,op.tipo].join("/")
 
         let obj:Operacao = {
@@ -53,8 +52,13 @@ async function cria(req:Request, res:Response){
         
         await db.collection(caminho).doc(id).create(obj)
 
+        /*
+        NOTA: não vem ao caso exatamente agora, mas a intenção é quebrar a descrição e 
+              construir um índice no banco de dados onde cada palavra tenha uma lista de transações
+              onde ela é citada dentro da descrição.
         let tags = transacao.op.descricao.toLowerCase().split(" ")
         console.log("Inserir a transação "+id+" nos tags ["+tags.join("/")+"] da pasta "+op.tipo )
+        */
 
         res.status(200).json({msg:"Operação registrada.", id:id})        
     }catch(e){
@@ -77,45 +81,43 @@ async function detalha(req:Request, res:Response){
 
 // PUT /x/id
 async function atualiza(req:Request, res:Response){
-    /*
-    validarTransacao(req, res, async (transacao, res)=>{
-        try{
-            if(!valida.Id(transacao.op.id))
-                throw("Id de transação inválida.")
-            let op = transacao.op,
-                data:Data = data_iso(op.data)
-            // ver se a pessoa está tentando editar algum documento válido.
-            const original = transacao.op.id,  
-                 id = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao}`),
-                 pasta = [c.USERS,transacao.u.id,op.tipo].join("/"),
-                 alterado = {descricao : transacao.op.descricao,
-                              categoria: transacao.op.categoria,
-                                 valor : transacao.op.valor,
-                                  data : data.iso,
-                                    id : id,  
-                                   tags: transacao.op.descricao.toLocaleLowerCase().split(" ")}
-            const anterior:DocumentSnapshot = await db.collection(pasta).doc(original).get()
-            // se mudar a data 
-            // se existe vou poder ou alterar ou deletar e recriar.
-            
-            if(anterior.exists){
-                if(original !== id){
-                    
-                    // apaga o registro existente e cria um novo.
-                    await db.runTransaction( async (t:Transaction) =>{
-                        t.create(db.collection(pasta).doc(id), alterado)
-                         .delete(db.collection(pasta).doc(original))
-                    })
-                }else
-                    // atualiza o registro existente.
-                    await db.collection(pasta).doc(id).update(alterado)    
-            }else
-                throw "Operação "+original+" não existe."
-            res.status(200).json({msg : "Operação modificada." , id : id})
-        }catch(e){
-            res.status(400).send("Erro alterando a operação:\n"+e)
+    try{
+        let transacao = valida.Transacao(req)
+        valida.Id(transacao.op.id)
+        let op = transacao.op,
+            data = util.dataIso(op.data)
+        
+        // compara o id original com o id novo pra ver se vai ter colisão
+        const original = transacao.op.id,
+              id = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao.toLowerCase()}`),
+              pasta = [c.USERS, transacao.u.id, op.tipo].join("/"),
+              alterado:Operacao = {
+                descricao : transacao.op.descricao,
+                    valor : transacao.op.valor,
+                     data : data.iso,
+                       id : id
+              } 
+
+              if(op.tipo === c.DESPESA)
+                alterado.categoria = transacao.op.categoria || Categorias.OUTRAS
+
+        const anterior:DocumentSnapshot = await db.collection(pasta).doc(original).get()
+        if(anterior.exists){
+            if(original === id){
+                await db.collection(pasta).doc(id).update(alterado) 
+            }else{
+                await db.runTransaction( async (t:Transaction) =>{
+                    t.create(db.collection(pasta).doc(id), alterado)
+                     .delete(db.collection(pasta).doc(original))
+                })
+            }
+            res.status(200).json({msg : "Operação alterada." , anterior : original, id : id})
+        }else{
+            throw("Alterando registro inexistente: "+original)
         }
-    })*/
+    }catch(e){
+        res.status(400).send("Erro atualizando o registro:\n"+e)
+    }
 }
 
 // DELETE /x/id
@@ -136,49 +138,28 @@ async function exclui(req:Request, res:Response){
 async function busca(req:Request, res:Response){
     try{
         let
-            consulta = valida.Consulta( req ),
-            result: (FirebaseFirestore.DocumentData | undefined)[] = [],
-            record: QuerySnapshot,
+            consulta = valida.Consulta( req ),    
             q = Object.entries(req.query),
-            ref = db.collection(c.USERS+"/"+consulta.u.id+"/"+consulta.p.tipo)
+            ref = db.collection(c.USERS+"/"+consulta.u.id+"/"+consulta.p.tipo),
+            record: QuerySnapshot  = await ref.get(),
+            result: (FirebaseFirestore.DocumentData | undefined)[] = record.docs.map( (d:DocumentSnapshot) => d.data() )
         
+        // Realiza busca linear pela descrição
         if(q.length > 0){
-            result.push( {msg : "Ainda não sei buscar por descrição."} )
-        }else{
-
+            if(req.query.descricao){
+                let d = (req.query.descricao as string) .toLowerCase()
+                // filtrar tudo por descrição
+                result = result.filter( r =>{
+                    let desc = util.decodaId(r?.id)
+                    return desc.includes( d )
+                })
+            }
         }   
-        record = await ref.get()
-        result = record.docs.map( (d:DocumentSnapshot) => d.data() )
         res.status(200).json(result)
-
     }catch(e){
         res.status(400).send("Erro alterando a operação:\n"+e)
     }
-    /*
-    // tem coisas nos parâmetros?
-    validarConsulta(req, res, async (consulta, res)=>{
-        let result: (FirebaseFirestore.DocumentData | undefined)[] = [], 
-            record: QuerySnapshot
-
-        console.log("Buscando em "+consulta.p.tipo +" "+Object.entries(req.query).join(":"))
-        let q = Object.entries(req.query)
-        let ref = db.collection(c.USERS+"/"+consulta.u.id+"/"+consulta.p.tipo)
-
-        // ao invés de filtrar todos os documentos checando se a descrição de cada um deles inclui uma palavra,
-        // busco a palavra no índice e retorno os documentos que tem ela na descrição
-        if(q.length > 0){
-            // ref.where() bla bla bla
-            let indice = await db.collection(c.USERS+"/"+consulta.u.id+"/indice").doc(consulta.p.tipo).get() // precisa disso?
-            let espaco_de_busca = indice.data()
-            console.log("Pesquisar "+consulta.p.descricao)
-            Object.entries( espaco_de_busca.tags ).map( (value : any[]) =>{
-                console.log(value[0] +" parece com "+consulta.p.descricao+"?")
-                console.log(value[1].join("-"))
-            })
-        }
-    })*/
 }
-
 
 // GET /op/yyyy/mm => mostra todas as op do mês mm do ano yyyy
 async function mensal(req:Request, res:Response){
@@ -225,6 +206,7 @@ async function resumo(req:Request, res:Response){
             let d = e.data(),
                 c = util.padrao( d?.categoria , Categorias.OUTRAS ),
                 v = util.padrao( d?.valor,0)
+                
             if(despesas_categorizadas[c]){
                 despesas_categorizadas[c] += v
             }else{

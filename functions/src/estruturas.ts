@@ -4,10 +4,17 @@ const c = {
     USERS : "usuarios",
     RECEITA : "receitas",
     DESPESA : "despesas"
-},
+}
 
-Categorias = {
-    OUTRAS : "outras"
+export enum Categorias{
+    OUTRAS = "Outras",
+    IMPREVISTOS = "Imprevistos",
+    LAZER = "Lazer",
+    EDUCAÇÃO = "Edudacao",
+    TRANSPORTE = "Transporte",
+    MORADIA = "Moradia",
+    SAÚDE = "Saúde",
+    ALIMENTAÇÃO = "Alimentação"
 }
 
 

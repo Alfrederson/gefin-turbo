@@ -6,6 +6,7 @@ const base62 = Base62Str.createInstance()
 export const util = {
     padrao : (x:any,y:any) => x || y,
     geraId : (path : string) => base62.encodeStr(path),
+    decodaId : (id : string) => base62.decodeStr(id),
     diasNoMes : (ano:number, mes:number)=>{
         let bissexto = ano % 4 === 0 ? 1 : 0
         let meses = [

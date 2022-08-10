@@ -16,15 +16,17 @@ export const valida = {
         if(dia > util.diasNoMes(ano,mes)) throw `${mes} de ${ano} não tem ${dia} dias!`
     },
 
-    // id = ${data.iso}/${op.descricao}
+    // id = yyyy-mm/bla bla bla
     Id : (id : string) =>{
         let s = base62.decodeStr(id)
         let partes = s.split("/")
+        console.log("Validando: "+id+"="+s)
         if(partes.length !== 2)
             throw("ID não possui data/desc")
-        if(partes[0].length!==7){
-            throw("ID com data inválida")
-        }
+
+//        if(partes[0].length!==7){
+//            throw("ID com data inválida") isso mais atrapalha do que ajuda.
+//        }
             
         let data = partes[0].split("-")
         if(data.length !== 2)
