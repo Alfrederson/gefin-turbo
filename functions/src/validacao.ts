@@ -34,7 +34,7 @@ export const valida = {
 
         valida.Data(1,parseInt(data[1]),parseInt(data[0]))
         // só isso
-        return true
+        return id
     },
     
     Consulta : (req:Request, espera:string[]=[])=>{

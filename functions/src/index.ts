@@ -1,8 +1,8 @@
 import * as functions from "firebase-functions"
 import { Request, Response } from "firebase-functions"
- import { /*DocumentSnapshot,*/ DocumentSnapshot, QuerySnapshot, Transaction } from "firebase-admin/firestore"
+ import { DocumentSnapshot, QuerySnapshot, Transaction } from "firebase-admin/firestore"
 
-import { /*Consulta,*/ Data, Operacao, /*Transacao,*/ c , Categorias } from "./estruturas"
+import { Data, Operacao, c , Categorias } from "./estruturas"
 import { util   } from "./utilidade"
 import { extrai } from "./extracao"
 import { valida } from "./validacao"
@@ -25,11 +25,12 @@ async function cria(req:Request, res:Response){
     // já está confuso o bastante do jeito que está.
     // mas se der, dá pra eliminar 10 linhas de código.
     try{
-        let transacao = valida.Transacao(req)
-        let op = transacao.op,
-        data:Data = util.dataIso(op.data)
-        valida.Data(data.dd, data.mm, data.yyyy)
+        const
+            transacao = valida.Transacao(req),
+            op = transacao.op,
+            data:Data = util.dataIso(op.data)
 
+        valida.Data(data.dd, data.mm, data.yyyy)
         if(!op.descricao || op.descricao == "") 
             throw("Descrição inválida: "+op.descricao)
 
@@ -37,15 +38,14 @@ async function cria(req:Request, res:Response){
             throw("Valor inválido: "+op.valor)
 
         const 
-            id      = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao.toLowerCase()}`),
-            caminho = [c.USERS,transacao.u.id,op.tipo].join("/")
-
-        let obj:Operacao = {
-            descricao : transacao.op.descricao,
-            valor : transacao.op.valor,
-            data : data.iso,
-            id : id
-        }        
+            id      = util.geraId(data.yyyy, data.mm, op.descricao),
+            caminho = [c.USERS,transacao.u.id,op.tipo].join("/"),
+            obj:Operacao = {
+                descricao : transacao.op.descricao,
+                valor : transacao.op.valor,
+                data : data.iso,
+                id : id
+            }        
         
         if(transacao.op.tipo === c.DESPESA) 
             obj.categoria = transacao.op.categoria 
@@ -60,7 +60,7 @@ async function cria(req:Request, res:Response){
         console.log("Inserir a transação "+id+" nos tags ["+tags.join("/")+"] da pasta "+op.tipo )
         */
 
-        res.status(200).json({msg:"Operação registrada.", id:id})        
+        res.status(201).json({msg:"Operação registrada.", id:id})        
     }catch(e){
         res.status(400).send("Erro na criação do registro:\n"+e)
     }
@@ -69,10 +69,11 @@ async function cria(req:Request, res:Response){
 // GET /x/id
 async function detalha(req:Request, res:Response){
     try{
-        let transacao = valida.Transacao(req)
-        valida.Id(transacao.op.id)
-        const caminho : string = [transacao.u.id,transacao.op.tipo,transacao.op.id].join("/"),
-              r = await db.collection(c.USERS).doc(caminho).get()
+        const 
+            transacao = valida.Transacao(req),
+            id = valida.Id(transacao.op.id),
+            caminho : string = [transacao.u.id,transacao.op.tipo, id ].join("/"),
+            r = await db.collection(c.USERS).doc(caminho).get()
         res.status(200).json(  r.data() )
     }catch(e){
         res.status(400).send("Erro procurando o registro:\n"+e)
@@ -82,39 +83,36 @@ async function detalha(req:Request, res:Response){
 // PUT /x/id
 async function atualiza(req:Request, res:Response){
     try{
-        let transacao = valida.Transacao(req)
-        valida.Id(transacao.op.id)
-        let op = transacao.op,
-            data = util.dataIso(op.data)
+        const 
+            transacao = valida.Transacao(req),
+            original  =  valida.Id(transacao.op.id),
+            op = transacao.op,
+            data = util.dataIso(op.data),
         
-        // compara o id original com o id novo pra ver se vai ter colisão
-        const original = transacao.op.id,
-              id = util.geraId(`${data.yyyy}-${data.mm}/${op.descricao.toLowerCase()}`),
-              pasta = [c.USERS, transacao.u.id, op.tipo].join("/"),
-              alterado:Operacao = {
-                descricao : transacao.op.descricao,
-                    valor : transacao.op.valor,
-                     data : data.iso,
-                       id : id
-              } 
+            id = util.geraId(data.yyyy, data.mm, op.descricao),
+            pasta = [c.USERS, transacao.u.id, op.tipo].join("/"),
+            alterado:Operacao = {
+            descricao : transacao.op.descricao,
+                valor : transacao.op.valor,
+                    data : data.iso,
+                    id : id
+            } 
 
-              if(op.tipo === c.DESPESA)
-                alterado.categoria = transacao.op.categoria || Categorias.OUTRAS
+        if(op.tipo === c.DESPESA)
+            alterado.categoria = transacao.op.categoria || Categorias.OUTRAS
 
-        const anterior:DocumentSnapshot = await db.collection(pasta).doc(original).get()
-        if(anterior.exists){
-            if(original === id){
-                await db.collection(pasta).doc(id).update(alterado) 
-            }else{
-                await db.runTransaction( async (t:Transaction) =>{
-                    t.create(db.collection(pasta).doc(id), alterado)
-                     .delete(db.collection(pasta).doc(original))
-                })
-            }
-            res.status(200).json({msg : "Operação alterada." , anterior : original, id : id})
-        }else{
-            throw("Alterando registro inexistente: "+original)
-        }
+        // compara o id original com o id novo pra ver se vai ter só update ou se vai ser desmaterialização e rematerialização
+        if(original === id)
+            await db.collection(pasta).doc(id).update({ ...alterado, exists: true} ) 
+        else
+            // se qualquer uma das alterações falhar, a transação inteira é revertida,
+            // então não existe o risco de apagar o original
+            await db.runTransaction( async (t:Transaction) =>
+                t.delete(db.collection(pasta).doc(original) , {exists:true} ) 
+                 .create(db.collection(pasta).doc(id), alterado)
+            )  
+        res.status(200).json({msg : "Operação alterada." , anterior : original, id : id})
+
     }catch(e){
         res.status(400).send("Erro atualizando o registro:\n"+e)
     }
@@ -123,10 +121,11 @@ async function atualiza(req:Request, res:Response){
 // DELETE /x/id
 async function exclui(req:Request, res:Response){
     try{
-        let transacao = valida.Transacao(req)
-        valida.Id(transacao.op.id)
-        await db.collection([c.USERS,transacao.u.id,transacao.op.tipo].join("/")).doc(transacao.op.id).delete()
-        res.status(200).json({msg : "Operação removida.", id: transacao.op.id})
+        const
+            transacao = valida.Transacao(req),
+            id = valida.Id(transacao.op.id)
+        await db.collection([c.USERS,transacao.u.id,transacao.op.tipo].join("/")).doc(id).delete({exists : true})
+        res.status(200).json({msg : "Operação removida.", id: id})
     }catch(e){
         res.status(400).send("Erro eliminando o registro:\n"+e)
     }
@@ -137,15 +136,16 @@ async function exclui(req:Request, res:Response){
 
 async function busca(req:Request, res:Response){
     try{
-        let
+        const
             consulta = valida.Consulta( req ),    
             q = Object.entries(req.query),
             ref = db.collection(c.USERS+"/"+consulta.u.id+"/"+consulta.p.tipo),
-            record: QuerySnapshot  = await ref.get(),
+            record: QuerySnapshot  = await ref.get()
+        let
             result: (FirebaseFirestore.DocumentData | undefined)[] = record.docs.map( (d:DocumentSnapshot) => d.data() )
         
         // Realiza busca linear pela descrição
-        if(q.length > 0){
+        if(q.length > 0)
             if(req.query.descricao){
                 let d = (req.query.descricao as string) .toLowerCase()
                 // filtrar tudo por descrição
@@ -154,7 +154,6 @@ async function busca(req:Request, res:Response){
                     return desc.includes( d )
                 })
             }
-        }   
         res.status(200).json(result)
     }catch(e){
         res.status(400).send("Erro alterando a operação:\n"+e)
@@ -164,7 +163,7 @@ async function busca(req:Request, res:Response){
 // GET /op/yyyy/mm => mostra todas as op do mês mm do ano yyyy
 async function mensal(req:Request, res:Response){
     try{
-        let
+        const
             consulta = valida.Consulta(req, ["mes","ano"]),
             [inicio,fim] = extrai.Mes(consulta),
             record = await db.collection(c.USERS+"/"+consulta.u.id+"/"+consulta.p.tipo)
@@ -180,7 +179,7 @@ async function mensal(req:Request, res:Response){
 // GET resumo/yyyy/mm => gera um resumo do mês mm do ano yyyy
 async function resumo(req:Request, res:Response){
     try{
-        let
+        const
             consulta = valida.Consulta(req, ["mes","ano"]),
             [inicio,fim] = extrai.Mes(consulta),
             receitas = await db.collection(c.USERS+"/"+consulta.u.id+"/receitas")
@@ -207,11 +206,11 @@ async function resumo(req:Request, res:Response){
                 c = util.padrao( d?.categoria , Categorias.OUTRAS ),
                 v = util.padrao( d?.valor,0)
                 
-            if(despesas_categorizadas[c]){
+            if(despesas_categorizadas[c])
                 despesas_categorizadas[c] += v
-            }else{
+            else
                 despesas_categorizadas[c] = v
-            }
+
             resumo.despesas += v
         })        
         resumo.saldo = resumo.receitas - resumo.despesas
