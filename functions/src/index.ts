@@ -74,6 +74,8 @@ async function detalha(req:Request, res:Response){
             id = valida.Id(transacao.op.id),
             caminho : string = [transacao.u.id,transacao.op.tipo, id ].join("/"),
             r = await db.collection(c.USERS).doc(caminho).get()
+        if(!r.data())
+            throw "Registro "+id+" inexistente"
         res.status(200).json(  r.data() )
     }catch(e){
         res.status(400).send("Erro procurando o registro:\n"+e)

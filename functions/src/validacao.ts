@@ -23,10 +23,6 @@ export const valida = {
         console.log("Validando: "+id+"="+s)
         if(partes.length !== 2)
             throw("ID não possui data/desc")
-
-//        if(partes[0].length!==7){
-//            throw("ID com data inválida") isso mais atrapalha do que ajuda.
-//        }
             
         let data = partes[0].split("-")
         if(data.length !== 2)
