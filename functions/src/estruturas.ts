@@ -10,12 +10,13 @@ export enum Categorias{
     OUTRAS = "Outras",
     IMPREVISTOS = "Imprevistos",
     LAZER = "Lazer",
-    EDUCAÇÃO = "Edudacao",
+    EDUCAÇÃO = "Educação",
     TRANSPORTE = "Transporte",
     MORADIA = "Moradia",
     SAÚDE = "Saúde",
     ALIMENTAÇÃO = "Alimentação"
 }
+
 
 
 export interface Operacao {

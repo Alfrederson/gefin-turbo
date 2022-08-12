@@ -80,8 +80,8 @@ const testa_vazio = async (tipo)=>{
         'Content-Type': 'application/x-www-form-urlencoded'
         })
         .send({data : 20220933, descricao : "ifood", valor : 700, categoria : "Alimentação"})
-
-        if(resultado(res).status !== 400)
+        print(res.status)
+        if(res.status !== 400)
             throw "O sistema não deve permitir inserção de transação com data inválida"
     }
 

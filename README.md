@@ -24,6 +24,8 @@ descricao => descrição curta do evento
 
 valor => valor movimentado no evento
 
+categoria => no caso das despesas, um desses valores: **Outras, Imprevistos, Lazer, Educação, Transporte, Moradia, Saúde e Alimentação**. (ou qualquer outra coisa, o sistema vai inserir normalmente)
+
 Retorno:
 
 JSON contendo os seguintes dados:
@@ -46,13 +48,62 @@ Array de todos os eventos de receitas ou despesas em JSON, de acordo com o segui
 ```
 [
     {
-        "data": "YYYY-MM-DD",
+        "data": "YYYYMMDD",
         "descricao": "descrição",
         "valor": 300,
         "id": "id_da_operação"
     }, ...
 ]
 ```
+
+## Buscar
+
+GET /op/descricao?=palavra
+
+Retorno:
+
+Array de todos os eventos de receitas ou despesas em JSON, que contenham *palavra* na descrição.
+```
+[
+    {
+        "data": "YYYYMMDD",
+        "descricao": "descrição *palavra*",
+        "valor": 300,
+        "id": "id_da_operação"
+    }, ...
+]
+```
+
+## Resumo
+GET /resumo/ano/mes
+
+Retorno: um objeto em JSON contendo as seguintes informações:
+
+**inicio** : Primeiro dia do mês especificado no formato YYYYMMDD.
+
+**fim** : Último dia do mês especificado no formato YYYYMMDD.
+
+**receitas** : Somatória de receitas do mês especificado.
+
+**despesas** : Somatória de despesas do mês especificado.
+
+**saldo** : Diferença entre receitas e despesas no mês especificado.
+
+**categorias** : Total de despesas por categorias.
+
+```
+{
+    "inicio": 20220801,
+    "fim": 20220831,
+    "receitas": 0,
+    "despesas": 0,
+    "saldo": 0,
+    "categorias": {}
+}
+```
+
+ 
+
 ## Detalhar
 
 GET /op/id_da_operação
@@ -65,7 +116,7 @@ Dados da operação de id id_da_transação em um JSON, de acordo com o seguinte
 {
     "id": "id_da_operação",
     "valor": 300,
-    "data": "YYYY-MM-DD",
+    "data": "YYYYMMDD",
     "descricao": "descrição"
 }
 ```
