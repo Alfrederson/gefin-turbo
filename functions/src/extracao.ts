@@ -4,9 +4,20 @@ import { Request } from "firebase-functions"
 import { c, Parametros, Consulta, Categorias } from "./estruturas"
 import { util } from "./utilidade"
 import { valida } from "./validacao"
+import { token } from "./token"
 
 
 export const extrai = {
+    /** Extrai os cookies de uma requisição. */
+    Cookies : (req:Request) =>{
+        let cookies:Record<string,string> = {}
+        req.headers.cookie?.split(";").forEach( par =>{
+            let x = par.split("=")
+            cookies[x[0]] = x[1]
+        })
+        return cookies
+    },
+
     Operacao : (req:Request) =>{
         // determina a operação (receita ou despesa) a partir do primeiro elemento da url
         let op = req.path.substring(1).toLowerCase().split("/")[0]
@@ -25,10 +36,23 @@ export const extrai = {
     // usar o google auth sei lá o que da vida pra pegar um
     // id de usuário enviado junto com a request.
     // por enquanto tudo vai ser feito no mesmo registro.
-    Usuario : (req:Request) =>({
-        id : "mula"
-    }),
+    Usuario : (req:Request) =>{
+        const
+            tok = token.extrair(req)
 
+        if(token){
+            console.log("Tem token: "+JSON.stringify(tok))
+            return {
+                id : tok.usuario
+            }
+        }else{
+            console.log("Não tem biscoito.")
+            //throw "Usuário não autenticado."
+        }
+        return {
+            id : "teste"
+        }
+    },
     Parametros : (req:Request) =>{
         let op = req.path.substring(1).toLowerCase().split("/")[0]
         let x = req.query.descricao as string
@@ -40,7 +64,7 @@ export const extrai = {
         }
         return _consulta
     },
-    // extrai um mês a partir do mês especificaod na consulta
+    /**  extrai um mês a partir do mês especificaod na consulta */
     Mes : (consulta:Consulta) =>{
         let ano = consulta.p.ano as number,
             mes = consulta.p.mes as number

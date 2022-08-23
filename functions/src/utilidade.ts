@@ -4,6 +4,7 @@ import { Data } from "./estruturas"
 const base62 = Base62Str.createInstance()
 
 export const util = {
+    agora : () => Math.floor(new Date().getTime() / 1000),
     padrao : (x:any,y:any) => x || y,
     geraId : (ano : number, mes : number, desc : string) => base62.encodeStr(`${ano}-${mes}/${desc.toLowerCase()}`),
     decodaId : (id : string) => base62.decodeStr(id),
@@ -41,7 +42,10 @@ export const util = {
             }
         }
         return new Data() // data inválida
-    }
+    },
+
+    encoda62 : (texto:string) => base62.encodeStr(texto),
+    decoda62 : (texto:string) => base62.decodeStr(texto)
 }
 
 
