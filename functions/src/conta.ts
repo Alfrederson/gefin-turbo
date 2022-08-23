@@ -92,7 +92,7 @@ export const Conta = {
                         emissao  : util.agora(),
                         validade : validade
                     }
-                    res.status(200).cookie("ficha",token.gerar(tok),{httpOnly : true}).send("Logado. Cheque os biscoitos.")
+                    res.status(200).cookie("__session",token.gerar(tok),{httpOnly : true}).send("Logado. Cheque os biscoitos.")
                     return
                 }
             throw "Credenciais inválidas. Senha incorreta ou não há uma conta registrada com este e-mail."
@@ -102,8 +102,8 @@ export const Conta = {
     },
     logout: async(req:Request, res:Response)=>{
         try{
-            if(extrai.Cookies(req)["ficha"])
-                res.status(200).cookie("ficha","",{maxAge: 1},).send("Logout efetuado.")
+            if(extrai.Cookies(req)["__session"])
+                res.status(200).cookie("__session","",{maxAge: 1},).send("Logout efetuado.")
             else
                 throw "Você não está logado, meu filho."
         }catch(e){
@@ -117,7 +117,7 @@ export const Conta = {
                 if(ficha.emissao + ficha.validade > util.agora()){
                     ficha.emissao = util.agora()
                     res.status(200)
-                       .cookie("ficha",token.gerar(ficha),{httpOnly : true})
+                       .cookie("__session",token.gerar(ficha),{httpOnly : true})
                        .send("Token renovado. Cheque os biscoitos.")
                     return
                 }

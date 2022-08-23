@@ -37,12 +37,13 @@ export
     const token = {
         extrair : (req:Request) =>{
             const mensagem = "Erro autenticando requisição"
+            
             let t = extrai.Cookies(req)
             
             // não gostei dessa repetição de throw.
-            if(t["ficha"]){
+            if(t["__session"]){
                 let obj, separado
-                separado = t["ficha"].split(".")
+                separado = t["__session"].split(".")
                 if( (separado.length !== 2) || 
                     (!separado[0]) || 
                     (!separado[1])

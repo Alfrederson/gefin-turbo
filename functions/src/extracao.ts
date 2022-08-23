@@ -1,15 +1,18 @@
 // categoria pode ser despesa ou receita
 // extrai os dados a partir da requisição.
-import { Request } from "firebase-functions"
+import { Request, logger } from "firebase-functions"
 import { c, Parametros, Consulta, Categorias } from "./estruturas"
 import { util } from "./utilidade"
 import { valida } from "./validacao"
 import { token } from "./token"
 
 
+
 export const extrai = {
     /** Extrai os cookies de uma requisição. */
     Cookies : (req:Request) =>{
+        logger.log(req.method + " => "+req.headers.cookie)
+
         let cookies:Record<string,string> = {}
         req.headers.cookie?.split(";").forEach( par =>{
             let x = par.split("=")
@@ -39,18 +42,8 @@ export const extrai = {
     Usuario : (req:Request) =>{
         const
             tok = token.extrair(req)
-
-        if(token){
-            console.log("Tem token: "+JSON.stringify(tok))
-            return {
-                id : tok.usuario
-            }
-        }else{
-            console.log("Não tem biscoito.")
-            //throw "Usuário não autenticado."
-        }
         return {
-            id : "teste"
+            id : tok.usuario
         }
     },
     Parametros : (req:Request) =>{

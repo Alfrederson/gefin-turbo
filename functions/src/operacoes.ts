@@ -54,7 +54,7 @@ const Operacoes = {
 
             res.status(201).json({msg:"Operação registrada.", id:id})        
         }catch(e){
-            res.status(400).send("Erro na criação do registro:\n"+e)
+            res.status(400).send("Erro criando registro:\n"+e)
         }
     },
 
@@ -140,7 +140,7 @@ const Operacoes = {
                 }
             res.status(200).json(result)
         }catch(e){
-            res.status(400).send("Erro alterando a operação:\n"+e)
+            res.status(400).send("Erro buscando:\n"+e)
         }
     },
 
@@ -158,7 +158,7 @@ const Operacoes = {
 
             res.status(200).json({ inicio: inicio, fim: fim  , resultado : result})
         }catch(e){
-            res.status(400).send("Erro realizando busca:\n"+e)
+            res.status(400).send("Erro buscando:\n"+e)
         }
     },
     // GET resumo/yyyy/mm => gera um resumo do mês mm do ano yyyy
