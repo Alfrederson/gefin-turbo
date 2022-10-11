@@ -7,8 +7,14 @@ import { Conta } from "./conta"
 
 const  
     express = require("express"),
-    app = express()
+    app = express(),
+    cors = require("cors"),
+    corsOptions = {
+        credentials: true,
+        origin: true
+    }
 
+app.use(cors(corsOptions))
 // ativa o sistema de operações usando o app.
 Operacoes.usa(app)
 Conta.usa(app)

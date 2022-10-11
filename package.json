@@ -7,5 +7,8 @@
     "test": "node testar.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.2.37"
+  }
 }

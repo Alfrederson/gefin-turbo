@@ -1,6 +1,6 @@
 // categoria pode ser despesa ou receita
 // extrai os dados a partir da requisição.
-import { Request, logger } from "firebase-functions"
+import { Request } from "firebase-functions"
 import { c, Parametros, Consulta, Categorias } from "./estruturas"
 import { util } from "./utilidade"
 import { valida } from "./validacao"
@@ -11,13 +11,12 @@ import { token } from "./token"
 export const extrai = {
     /** Extrai os cookies de uma requisição. */
     Cookies : (req:Request) =>{
-        logger.log(req.method + " => "+req.headers.cookie)
-
         let cookies:Record<string,string> = {}
         req.headers.cookie?.split(";").forEach( par =>{
             let x = par.split("=")
             cookies[x[0]] = x[1]
         })
+        
         return cookies
     },
 
@@ -26,7 +25,7 @@ export const extrai = {
         let op = req.path.substring(1).toLowerCase().split("/")[0]
     
         if(c.RECEITA !== op && c.DESPESA !== op) // nem um, nem outro? tchau
-            return null
+            return undefined
         else
             return{
                 id        : req.body.id || req.params.id,
