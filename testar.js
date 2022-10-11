@@ -57,6 +57,9 @@ const testa_vazio = async (tipo)=>{
 }
 
 (async function(){
+    /*
+        Teste totalmente infuncional se não for feito login.
+    */
     let res, r
 
     let tipo = "despesas"

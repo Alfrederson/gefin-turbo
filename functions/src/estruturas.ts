@@ -20,7 +20,7 @@ export enum Categorias{
 
 
 export interface Operacao {
-    id : string,
+    id? : string,
     descricao : string,
     categoria? : string,
     valor : number,
@@ -44,6 +44,8 @@ export interface Consulta {
     p          : Parametros,
     u          : Usuario
 }
+
+
 
 export class Data{
     yyyy : number = NaN;
